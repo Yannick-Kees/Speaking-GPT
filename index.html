@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Talking ChatBot</title>
+</head>
+<body>
+
+  <h1>Speech to Text Example</h1>
+  
+  <p>Click the "Start" button to begin recording, and the "Stop" button to end recording.</p>
+
+  <button id="start-button">Start</button>
+  <button id="stop-button">Stop</button>
+  
+  <div id="transcript"></div>
+  <div id="response"></div>
+
+  <script>
+    // Check if the browser supports Web Speech API
+    if ('webkitSpeechRecognition' in window) {
+  
+      // Create a new SpeechRecognition object
+      const recognition = new webkitSpeechRecognition();
+
+      // Set recognition settings
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'de-DE';
+
+      // Event listener for speech recognition result
+      recognition.onresult = function(event) {
+        const transcript = 'Q: ' + event.results[event.results.length-1][0].transcript + '\nA: ';
+
+        console.log(transcript);
+        // Display the transcribed text on the webpage
+        document.getElementById('transcript').innerHTML = transcript;
+
+
+        // Send the transcribed text to the OpenAI API
+        fetch('https://api.openai.com/v1/completions', {
+          method: 'post',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer API_KEY'
+          },
+          body: JSON.stringify({
+            prompt: transcript,
+            model: 'text-davinci-003',
+            max_tokens: 1000,
+            n:1,
+            stop: "\n"
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log(data.choices[0].text);
+          // Display the API response on the webpage
+          document.getElementById('response').innerHTML = data.choices[0].text;
+          // Read out the text
+          if ('speechSynthesis' in window) {
+            // Set up a new speech synthesis object
+            const synth = window.speechSynthesis;
+          
+            // Define a function to speak the provided text
+            function speak(text) {
+              // Create a new speech synthesis utterance
+              const utterance = new SpeechSynthesisUtterance(text);
+          
+              // Speak the utterance
+              synth.speak(utterance);
+            }
+          
+            // Call the speak function with some text
+            speak(data.choices[0].text);
+          } else {
+            console.log('Speech synthesis is not supported in this browser.');
+          }
+        })
+        .catch(error => {
+          console.log(error);
+        });
+      };
+      
+      // Event listener for start button
+      document.getElementById('start-button').addEventListener('click', function() {
+        recognition.start();
+      });
+      
+      // Event listener for stop button
+      document.getElementById('stop-button').addEventListener('click', function() {
+        recognition.stop();
+      });
+    }
+    else {
+      console.log('Speech recognition not supported in this browser');
+    }
+  </script>
+  
+</body>
+</html>
